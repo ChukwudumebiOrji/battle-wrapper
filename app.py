@@ -67,6 +67,7 @@ def config_stockfish(args):
         if not path:
             raise FileNotFoundError(f"Stockfish not found at {path} or in PATH")
 
+    # Build engine config with specified options, ensuring Syzygy path is included if available
     cfg = ["-engine", f"cmd={path}", "name=STOCKFISH", "proto=uci"]
     cfg.append(f"option.Threads={args.threads}")
     cfg.append(f"option.Hash={args.hash}")
@@ -86,6 +87,7 @@ def config_viridithas(args):
         if not path:
             raise FileNotFoundError(f"Viridithas not found at {path} or in PATH")
 
+    # Build engine config with specified options, ensuring Syzygy path is included if available
     cfg = ["-engine", f"cmd={path}", "name=VIRIDITHAS", "proto=uci"]
     cfg.append(f"option.Threads={args.threads}")
     cfg.append(f"option.Hash={args.hash}")
@@ -107,7 +109,7 @@ def run_battle():
     # 1. Base Binary
     cmd = [str(CUTECHESS_PATH)]
 
-    # 2. Engine Definitions (block, no per-engine tc/depth/st)
+    # 2. Engine Definitions
     for i, name in enumerate(engine_names):
         e_name = name.lower()
 
@@ -123,7 +125,6 @@ def run_battle():
         if "stockfish" in e_name and args.multi_pv > 1:
             e_cfg.append(f"option.MultiPV={args.multi_pv}")
 
-        # REMOVE all limit appending here
         cmd.extend(e_cfg)
 
     # 3. Build -each time control flags, supporting asymmetric if specified
@@ -162,21 +163,23 @@ def run_battle():
 
     cmd.extend(["-each"] + each_flags)
 
-    # 4. Global Match Settings (original logic, unchanged)
+    # 4. Global Match Settings
     timestamp = datetime.datetime.now().strftime("%d-%m_%H-%M")
     opening_name = pathlib.Path(args.pgn or "position").stem
     output_filename = OUTPUT_DIR / f"{opening_name}-{timestamp}-{args.games}-games.pgn"
 
     cmd.extend(
         [
-            "-tournament",
+            "-tournament",  # Use tournament mode to ensure proper scorekeeping and PGN output
             "gauntlet",
-            "-games",
+            "-games",  # Number of games to play (will be doubled if --repeat is used)
             str(args.games),
-            "-concurrency",
+            "-concurrency",  # Number of concurrent games to run
             str(args.concurrency),
-            "-repeat" if args.repeat else "",
-            "-recover",
+            "-repeat"
+            if args.repeat
+            else "",  # Repeat games with swapped colors to balance out first-move advantage
+            "-recover",  # Allow recovery from crashes without losing all progress
             "-draw",  # Enforce draw conditions to avoid infinite moves
             "movenumber=40",
             "movecount=3",
@@ -184,7 +187,7 @@ def run_battle():
             "-resign",  # Enforce resignation to avoid infinite moves
             "movecount=5",
             "score=400",
-            "-pgnout",
+            "-pgnout",  # Output PGN with full move details, including time and depth annotations
             str(output_filename),
         ]
     )
@@ -192,14 +195,20 @@ def run_battle():
     # 5. Opening Settings (Preserving PGN and FEN flags)
     if args.pgn:
         pgn_path = pathlib.Path(args.pgn).resolve()
-        cmd.extend(["-openings", f"file={pgn_path}", "format=pgn", "order=random"])
+        cmd.extend(
+            ["-openings", f"file={pgn_path}", "format=pgn", "order=random"]
+        )  # Randomize opening selection from PGN to ensure variety across games
     elif args.use_fen:
         temp_epd = pathlib.Path("current_start.epd")
         temp_epd.write_text(args.use_fen.strip())
-        cmd.extend(["-openings", f"file={temp_epd.resolve()}", "format=epd"])
+        cmd.extend(
+            ["-openings", f"file={temp_epd.resolve()}", "format=epd"]
+        )  # Use EPD format for single FEN to ensure proper parsing, even if it means creating a temporary file
     elif args.fen_file:
         fen_path = pathlib.Path(args.fen_file).resolve()
-        cmd.extend(["-openings", f"file={fen_path}", "format=epd", "order=random"])
+        cmd.extend(
+            ["-openings", f"file={fen_path}", "format=epd", "order=random"]
+        )  # Randomize opening selection from FEN file to ensure variety across games
 
     # 6. Clean and Execute
     cmd = [str(c) for c in cmd if c]
