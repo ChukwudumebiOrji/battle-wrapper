@@ -13,9 +13,9 @@ class InsightsReporter:
         
         # 1. Fetch data from SQLite, filtering out skipped sections
         cursor.execute("""
-            SELECT motif, player_side, uci_move, eval_loss, game_id, move_num 
+            SELECT primary_motif, side, move, eval_loss, game_id, move_number 
             FROM move_analysis 
-            WHERE motif != 'None' AND positional_idea != 'Game Decided (Skipped)'
+            WHERE primary_motif != 'None' AND positional_idea != 'Game Decided (Skipped)'
         """)
         rows = cursor.fetchall()
 
