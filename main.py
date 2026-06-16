@@ -12,9 +12,34 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def run_cutechess(args: argparse.Namespace) -> pathlib.Path:
+def get_cutechess_cli() -> str:
+    """Find cutechess-cli in PATH or at standard location"""
+    # Try PATH first
     cli = shutil.which("cutechess-cli")
-    if not cli: raise FileNotFoundError("cutechess-cli not found in PATH")
+    if cli:
+        return cli
+    
+    # Try macOS homebrew location
+    homebrew_cli = pathlib.Path("/opt/homebrew/bin/cutechess-cli")
+    if homebrew_cli.exists():
+        return str(homebrew_cli)
+    
+    # Try Downloads location (macOS)
+    downloads_cli = pathlib.Path.home() / "Downloads" / "cutechess-1.4.0" / "build" / "cutechess-cli"
+    if downloads_cli.exists():
+        return str(downloads_cli)
+    
+    raise FileNotFoundError(
+        "cutechess-cli not found. Please install it or add it to PATH.\n"
+        "Expected locations checked:\n"
+        f"  - {homebrew_cli}\n"
+        f"  - {downloads_cli}\n"
+        "  - PATH environment variable"
+    )
+
+
+def run_cutechess(args: argparse.Namespace) -> pathlib.Path:
+    cli = get_cutechess_cli()
     ts, opening = datetime.datetime.now().strftime("%d-%m_%H-%M"), args.pgn.stem
     out_dir = pathlib.Path(__file__).parent / "engine_battles"; out_dir.mkdir(exist_ok=True)
     out_pgn = out_dir / f"{opening}-{ts}-{args.games}-games.pgn"
