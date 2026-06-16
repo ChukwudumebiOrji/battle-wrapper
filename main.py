@@ -16,6 +16,7 @@ from database import GameDatabase
 from engine import AnalysisCore
 from report import LearningInsights
 from insights_reporter import InsightsReporter
+from repertoire_analyzer import RepertoireAnalyzer
 
 # --- CUTECHESS ARENA ORCHESTRATION LAYER ---
 
@@ -382,6 +383,16 @@ def post_game_mining_pipeline(pgn_file: pathlib.Path, args: argparse.Namespace, 
         condensed_reporter.generate_report("arena_insights.txt")
     except Exception as e:
         print(f"[WARNING] Advanced insight grouping failed: {e}")
+
+    # Generate opening repertoire analysis report
+    print("[*] Generating opening repertoire analysis report...")
+    try:
+        opening_name = pathlib.Path(args.pgn).stem if args.pgn else pgn_file.stem
+        reports_dir = pathlib.Path(__file__).parent.resolve() / "reports"
+        repo_analyzer = RepertoireAnalyzer(pgn_file, opening_name)
+        repo_analyzer.analyze_and_report(reports_dir)
+    except Exception as e:
+        print(f"[WARNING] Repertoire analysis failed: {e}")
 
 def console_loop(db: GameDatabase):
     while True:
