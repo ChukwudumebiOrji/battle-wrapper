@@ -4,7 +4,6 @@ from repertoire_analyzer import RepertoireAnalyzer
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Play games then generate opening repertoire report")
-    p.add_argument("--1v1", dest="engines", nargs=2, metavar=("WHITE", "BLACK"), required=True)
     p.add_argument("--games", type=int, default=5)
     p.add_argument("--depth", type=int, default=10)
     p.add_argument("--analysis-depth", type=int, default=15)
@@ -38,14 +37,41 @@ def get_cutechess_cli() -> str:
     )
 
 
+def get_stockfish() -> str:
+    """Find stockfish in PATH or at standard location"""
+    # Try PATH first
+    sf = shutil.which("stockfish")
+    if sf:
+        return sf
+    
+    # Try macOS homebrew location
+    homebrew_sf = pathlib.Path("/opt/homebrew/bin/stockfish")
+    if homebrew_sf.exists():
+        return str(homebrew_sf)
+    
+    # Try Downloads location (macOS)
+    downloads_sf = pathlib.Path.home() / "Downloads" / "cutechess-1.4.0" / "stockfish-15.1" / "src" / "stockfish"
+    if downloads_sf.exists():
+        return str(downloads_sf)
+    
+    raise FileNotFoundError(
+        "stockfish not found. Please install it or add it to PATH.\n"
+        "Expected locations checked:\n"
+        f"  - {homebrew_sf}\n"
+        f"  - {downloads_sf}\n"
+        "  - PATH environment variable"
+    )
+
+
 def run_cutechess(args: argparse.Namespace) -> pathlib.Path:
     cli = get_cutechess_cli()
+    sf = get_stockfish()
     ts, opening = datetime.datetime.now().strftime("%d-%m_%H-%M"), args.pgn.stem
     out_dir = pathlib.Path(__file__).parent / "engine_battles"; out_dir.mkdir(exist_ok=True)
     out_pgn = out_dir / f"{opening}-{ts}-{args.games}-games.pgn"
     cmd = [
-        cli, "-engine", f"cmd={args.engines[0]}", f"name={args.engines[0].upper()}", "proto=uci",
-        "-engine", f"cmd={args.engines[1]}", f"name={args.engines[1].upper()}", "proto=uci",
+        cli, "-engine", f"cmd={sf}", "name=STOCKFISH", "proto=uci",
+        "-engine", f"cmd={sf}", "name=STOCKFISH2", "proto=uci",
         "-each", f"depth={args.depth}", "tc=inf", "-games", str(args.games), "-repeat", "-recover",
         "-openings", f"file={args.pgn.resolve()}", "format=pgn", "order=random", "-pgnout", str(out_pgn),
     ]
