@@ -40,6 +40,14 @@ class GameDatabase:
         """)
         self.conn.commit()
 
+    def clear_database(self):
+        """Clears all game and move analysis data from the database."""
+        self.cursor.executescript("""
+            DELETE FROM move_analysis;
+            DELETE FROM games;
+        """)
+        self.conn.commit()
+
     def store_game(self, white, black, date, result, pgn_text) -> int:
         """Stores a game or returns its ID if it was already indexed."""
         try:
