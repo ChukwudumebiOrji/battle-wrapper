@@ -13,17 +13,14 @@ def parse_args() -> argparse.Namespace:
 
 def get_cutechess_cli() -> str:
     """Find cutechess-cli in PATH or at standard location"""
-    # Try PATH first
     cli = shutil.which("cutechess-cli")
     if cli:
         return cli
     
-    # Try macOS homebrew location
     homebrew_cli = pathlib.Path("/opt/homebrew/bin/cutechess-cli")
     if homebrew_cli.exists():
         return str(homebrew_cli)
     
-    # Try Downloads location (macOS)
     downloads_cli = pathlib.Path.home() / "Downloads" / "cutechess-1.4.0" / "build" / "cutechess-cli"
     if downloads_cli.exists():
         return str(downloads_cli)
@@ -39,17 +36,14 @@ def get_cutechess_cli() -> str:
 
 def get_stockfish() -> str:
     """Find stockfish in PATH or at standard location"""
-    # Try PATH first
     sf = shutil.which("stockfish")
     if sf:
         return sf
     
-    # Try macOS homebrew location
     homebrew_sf = pathlib.Path("/opt/homebrew/bin/stockfish")
     if homebrew_sf.exists():
         return str(homebrew_sf)
     
-    # Try Downloads location (macOS)
     downloads_sf = pathlib.Path.home() / "Downloads" / "cutechess-1.4.0" / "stockfish-15.1" / "src" / "stockfish"
     if downloads_sf.exists():
         return str(downloads_sf)
@@ -72,7 +66,7 @@ def run_cutechess(args: argparse.Namespace) -> pathlib.Path:
     cmd = [
         cli, "-engine", f"cmd={sf}", "name=STOCKFISH", "proto=uci",
         "-engine", f"cmd={sf}", "name=STOCKFISH2", "proto=uci",
-        "-each", f"depth={args.depth}", "tc=inf", "-games", str(args.games), "-repeat", "-recover",
+        "-each", f"depth={args.depth}", "tc=inf", "-games", str(args.games), "-recover",
         "-openings", f"file={args.pgn.resolve()}", "format=pgn", "order=random", "-pgnout", str(out_pgn),
     ]
     print(f"[INFO] Executing Cutechess Arena: {' '.join(cmd)}")
