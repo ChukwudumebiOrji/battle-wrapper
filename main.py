@@ -255,6 +255,10 @@ def post_game_mining_pipeline(pgn_file: pathlib.Path, args: argparse.Namespace, 
         print(f"[-] Target match tracking PGN file missing: {pgn_file}")
         return
 
+    # Clear old database entries to prevent stale data from previous runs
+    print("[*] Clearing previous analysis data from database...")
+    db.clear_database()
+
     games_to_process = []
     with open(pgn_file, encoding="utf-8") as f:
         while True:
