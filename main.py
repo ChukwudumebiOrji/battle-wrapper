@@ -114,7 +114,7 @@ class BattleScriptArgs:
         parser.add_argument("--multi-pv", type=int, default=1, help="MultiPV for Stockfish")
         
         # Mining specific configuration overrides
-        parser.add_argument("--report", default="performance_report.txt", help="Output file path for text report")
+        parser.add_argument("--report", default="performance_report.md", help="Output file path for markdown report")
         parser.add_argument("--db", default="chess_analysis.db", help="Path to sqlite analysis data file")
         parser.add_argument("--analysis-depth", type=int, default=20, help="Engine depth used for post-game data mining")
         parser.add_argument("--browse", action="store_true", help="Launch interactive evaluation summary browser")
@@ -262,7 +262,24 @@ def post_game_mining_pipeline(pgn_file: pathlib.Path, args: argparse.Namespace, 
             if game is None: break
             games_to_process.append(game)
 
-    print(f"[+] Loaded {len(games_to_process)} arena matches. Launching multi-threaded analyzer...")
+    # Filter to only include engine vs engine games
+    engine_names = {"stockfish", "viridithas"}
+    engine_games = []
+    for game in games_to_process:
+        white = game.headers.get("White", "").lower()
+        black = game.headers.get("Black", "").lower()
+        # Check if both players are known engines (case-insensitive matching)
+        white_is_engine = any(eng in white for eng in engine_names)
+        black_is_engine = any(eng in black for eng in engine_names)
+        if white_is_engine and black_is_engine:
+            engine_games.append(game)
+    
+    print(f"[+] Loaded {len(games_to_process)} arena matches. Filtering to {len(engine_games)} engine vs engine games.")
+    if not engine_games:
+        print("[-] No engine vs engine games found. Skipping analysis.")
+        return
+    
+    print(f"[+] Launching multi-threaded analyzer...")
     engine_path = "/opt/homebrew/bin/stockfish" if pathlib.Path("/opt/homebrew/bin/stockfish").exists() else "/usr/games/stockfish"
     
     # Thermal Safety Guard: Hand 2 threads to the single active engine instance
@@ -272,13 +289,13 @@ def post_game_mining_pipeline(pgn_file: pathlib.Path, args: argparse.Namespace, 
     except Exception:
         pass
 
-    for idx, game in enumerate(games_to_process, 1):
+    for idx, game in enumerate(engine_games, 1):
         white = game.headers.get("White", "Unknown")
         black = game.headers.get("Black", "Unknown")
         date = game.headers.get("Date", "????.??.??")
         result = game.headers.get("Result", "*")
         
-        print(f"  [{idx}/{len(games_to_process)}] Processing Patterns: {white} vs {black}")
+        print(f"  [{idx}/{len(engine_games)}] Processing Patterns: {white} vs {black}")
         game_id = db.store_game(white, black, date, result, str(game))
         
         board = game.board()
