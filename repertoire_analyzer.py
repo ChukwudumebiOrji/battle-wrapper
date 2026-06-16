@@ -28,7 +28,7 @@ class PositionSnapshot:
 
 
 class RepertoireAnalyzer:
-    MIDDLEGAME_START = 15
+    MIDDLEGAME_START = 8
     MIDDLEGAME_END = 35
 
     def __init__(
